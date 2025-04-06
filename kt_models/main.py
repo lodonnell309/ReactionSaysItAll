@@ -35,6 +35,8 @@ def run():
     # Create a model
     if args.type == 'SoftmaxRegression':
         model = SoftmaxRegression()
+    elif args.type == 'TwoLayerNet':
+        model = TwoLayerNet(hidden_size=args.hidden_size)
 
     # Optimizer
     optimizer = SGD(learning_rate=args.learning_rate, reg=args.regularization_rate)
@@ -63,7 +65,7 @@ def run():
             best_model = copy.deepcopy(model)
 
     # evaluate on test data with the best model
-    
+
     batched_test_data, batched_test_label = generate_batched_data(test_data, test_label,
                                                                   batch_size=args.batch_size)
     _, test_accuracy = evaluate(batched_test_data, batched_test_label, best_model)
