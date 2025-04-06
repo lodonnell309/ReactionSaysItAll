@@ -6,7 +6,6 @@ from PIL import Image
 
 import matplotlib.pyplot as plt
 
-
 def load_images(path):
     """
     Load the images from all folders in that path, assign the same
@@ -58,17 +57,7 @@ def load_trainval():
     assert len(data) == len(label)
     print("Training data loaded with {count} images".format(count=len(data)))
 
-    total_count = len(data)
-    train_ct = int(total_count * 0.8)
-
-    train_data = data[:train_ct]
-    train_label = label[:train_ct]
-
-    val_data = data[train_ct:]
-    val_label = label[train_ct:]
-
-    return train_data, train_label, val_data, val_label
-
+    return data, label
 
 def load_test():
     """
@@ -79,11 +68,11 @@ def load_test():
         """
     # Load training data
     print("Loading testing data...")
-    test_data, test_label = load_images('../test')
-    assert len(test_data) == len(test_label)
-    print("Testing data loaded with {count} images".format(count=len(test_data)))
+    data, label = load_images('../test')
+    assert len(data) == len(label)
+    print("Testing data loaded with {count} images".format(count=len(data)))
 
-    return test_data, test_label
+    return data, label
 
 
 def generate_batched_data(data, label, batch_size=32, shuffle=False, seed=None):
@@ -141,29 +130,35 @@ def train(epoch, batched_train_data, batched_train_label, model, optimizer, debu
     epoch_loss = 0.0
     hits = 0
     count_samples = 0.0
+
     for idx, (input, target) in enumerate(zip(batched_train_data, batched_train_label)):
 
         start_time = time.time()
-        loss, accuracy = model.forward(input, target)
 
+        loss, accuracy = model.forward(input, target)
         optimizer.update(model)
+
         epoch_loss += loss
         hits += accuracy * input.shape[0]
         count_samples += input.shape[0]
 
         forward_time = time.time() - start_time
-        if idx % 10 == 0 and debug:
-            print(('Epoch: [{0}][{1}/{2}]\t'
-                   'Batch Time {batch_time:.3f} \t'
-                   'Batch Loss {loss:.4f}\t'
-                   'Train Accuracy ' + "{accuracy:.4f}" '\t').format(
-                epoch, idx, len(batched_train_data), batch_time=forward_time,
-                loss=loss, accuracy=accuracy))
+
+        # if idx % 10 == 0 and debug:
+        #     print(('Epoch: [{0}][{1}/{2}]\t'
+        #            'Batch Time {batch_time:.3f} \t'
+        #            'Batch Loss {loss:.4f}\t'
+        #            'Train Accuracy ' + "{accuracy:.4f}" '\t').format(epoch, idx,
+        #                                                              len(batched_train_data),
+        #                                                              batch_time=forward_time,
+        #                                                              loss=loss, accuracy=accuracy))
+
     epoch_loss /= len(batched_train_data)
     epoch_acc = hits / count_samples
 
     if debug:
         print("* Average Accuracy of Epoch {} is: {:.4f}".format(epoch, epoch_acc))
+
     return epoch_loss, epoch_acc
 
 
@@ -180,6 +175,7 @@ def evaluate(batched_test_data, batched_test_label, model, debug=True):
     epoch_loss = 0.0
     hits = 0
     count_samples = 0.0
+
     for idx, (input, target) in enumerate(zip(batched_test_data, batched_test_label)):
 
         loss, accuracy = model.forward(input, target, mode='valid')
@@ -187,17 +183,20 @@ def evaluate(batched_test_data, batched_test_label, model, debug=True):
         epoch_loss += loss
         hits += accuracy * input.shape[0]
         count_samples += input.shape[0]
-        if debug:
-            print(('Evaluate: [{0}/{1}]\t'
-                   'Batch Accuracy ' + "{accuracy:.4f}" '\t').format(
-                idx, len(batched_test_data), accuracy=accuracy))
+
+        # if debug:
+        #     print(('Evaluate: [{0}/{1}]\t'
+        #            'Batch Accuracy ' +  "{accuracy:.4f}" '\t').format(idx,
+        #                                                               len(batched_test_data),
+        #                                                               accuracy=accuracy))
+
     epoch_loss /= len(batched_test_data)
     epoch_acc = hits / count_samples
 
     return epoch_loss, epoch_acc
 
 
-def plot_curves
+# def plot_curves
 
 
 if __name__ == "__main__":
