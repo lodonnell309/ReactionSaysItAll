@@ -36,12 +36,13 @@ def load_images(path):
                 im = Image.open(image_path)
 
                 # update the list of data and label
-                datas.append(list(im.getdata()))
+                image_data = list(im.getdata())
+                normalized_image_data = np.array(image_data) / 255
+                datas.append(normalized_image_data)
                 labels.append(label)
             label += 1
 
     return datas, labels
-
 
 def load_trainval():
     """
@@ -73,7 +74,6 @@ def load_test():
     print("Testing data loaded with {count} images".format(count=len(data)))
 
     return data, label
-
 
 def generate_batched_data(data, label, batch_size=32, shuffle=False, seed=None):
     """
@@ -200,10 +200,11 @@ def evaluate(batched_test_data, batched_test_label, model, debug=True):
 
 
 if __name__ == "__main__":
-    train_data, train_label, val_data, val_label = load_trainval()
-    test_data, test_label = load_test()
-    train_batched_data, train_batched_label = generate_batched_data(train_data, train_label)
-    val_batched_data, val_batched_label = generate_batched_data(val_data, val_label)
-    test_batched_data, test_batched_label = generate_batched_data(test_data, test_label)
+    train_data, train_label = load_trainval()
+    # test_data, test_label = load_test()
+    # train_batched_data, train_batched_label = generate_batched_data(train_data, train_label)
+    # val_batched_data, val_batched_label = generate_batched_data(val_data, val_label)
+    # test_batched_data, test_batched_label = generate_batched_data(test_data, test_label)
+    print(train_data[0])
 
 
