@@ -1,7 +1,7 @@
 import numpy as np
 
 class SoftmaxRegression():
-    def __init__(self, input_size=48 * 48, num_classes=7):
+    def __init__(self, input_size=48*48, num_classes=7):
         """
         A single layer softmax regression. The network is composed by:
         a linear layer without bias => (activation) => Softmax
@@ -10,18 +10,11 @@ class SoftmaxRegression():
         """
         self.input_size = input_size
         self.num_classes = num_classes
-        self.weights = dict()
-        self.gradients = dict()
-        self._weight_init()
-
-    def _weight_init(self):
-        '''
-        initialize weights of the single layer regression network. No bias term included.
-        :return: None; self.weights is filled based on method
-        - W1: The weight matrix of the linear layer of shape (num_features, hidden_size)
-        '''
         np.random.seed(1024)
+        # initialize weights of the single layer regression network. No bias term included.
+        self.weights = dict()
         self.weights['W1'] = 0.001 * np.random.randn(self.input_size, self.num_classes)
+        self.gradients = dict()
         self.gradients['W1'] = np.zeros((self.input_size, self.num_classes))
 
     def forward(self, X, y, mode='train'):
@@ -34,7 +27,6 @@ class SoftmaxRegression():
             loss: the loss associated with the batch
             accuracy: the accuracy of the batch
         """
-
         ## Implement the forward process
 
         # fully-connected layer

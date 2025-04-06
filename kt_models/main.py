@@ -51,7 +51,8 @@ def run():
         # train on the train data and get the model
         batched_train_data, batched_train_label = generate_batched_data(train_data, train_label,
                                                                         batch_size=args.batch_size,
-                                                                        shuffle=True)
+                                                                        shuffle=True,
+                                                                        seed=1024)
         epoch_loss, epoch_accuracy = train(epoch, batched_train_data, batched_train_label,
                                            model, optimizer, args.debug)
         train_loss_history.append(epoch_loss)
@@ -62,6 +63,7 @@ def run():
             best_model = copy.deepcopy(model)
 
     # evaluate on test data with the best model
+    
     batched_test_data, batched_test_label = generate_batched_data(test_data, test_label,
                                                                   batch_size=args.batch_size)
     _, test_accuracy = evaluate(batched_test_data, batched_test_label, best_model)
