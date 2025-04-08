@@ -1,18 +1,34 @@
 from datasets import load_dataset
 from datasets import Dataset
 
-def build_context_response_pairs(dialogs, emotions):
+## kaggle emotions: angry, disgust, fear, happy, neutral, sad, surprise
+emotion_map = {
+    0: 'neutral',
+    1: 'angry',
+    2: 'disgust',
+    3: 'fear',
+    4: 'happy',
+    5: 'sad',
+    6: 'surprise'
+}
+
+### Adds context token
+def build_context_response_pairs(dialogs, emotions, emotion_map=emotion_map):
     data = {
-        "context": [],
-        "response": [],
-        "emotion": []
+        "input": [],
+        "response": []
     }
 
     for dialog, emo in zip(dialogs, emotions):
         for i in range(len(dialog) - 1):
-            data["context"].append(dialog[i])
-            data["response"].append(dialog[i + 1])
-            data["emotion"].append(emo[i + 1])
+            emotion_label = emotion_map[emo[i + 1]]
+            context = dialog[i]
+            response = dialog[i + 1]
+
+            input_text = f"emotion: {emotion_label} | context: {context}"
+
+            data["input"].append(input_text)
+            data["response"].append(response)
 
     return Dataset.from_dict(data)
 
