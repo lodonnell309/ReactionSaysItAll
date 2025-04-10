@@ -1,18 +1,11 @@
 Train:
-  batch_size: 128
-  learning_rate: 0.0001
-  regularization_rate: 0.0005
-  epochs: 5
-  steps: [6, 8]
-  warmup: 0
-  momentum: 0.9
-  gamma: 1
+  batch_size: 64
+  learning_rate: 0.05
+  regularization_rate: 0.006
+  epochs: 15
   debug: True
+  momentum: 0.8
 
 Model:
-  type: CNN # TwoLayerNet or VanillaCNN or MyModel or ResNet-32
+  type: CNN
   save_best: True
-
-data:
-  imbalance: regular # regular or imbalance
-  beta: 0.9999
