@@ -2,11 +2,12 @@ import time
 import os
 import numpy as np
 import random
+import torch
 from PIL import Image
 
 import matplotlib.pyplot as plt
 
-def load_images(path):
+def load_images(path, model_type):
     """
     Load the images from all folders in that path, assign the same
     numeric value to images in the same folder
@@ -35,16 +36,19 @@ def load_images(path):
                 # get the RGB value of image
                 im = Image.open(image_path)
 
+                if model_type == 'SoftmaxRegression' or model_type == 'TwoLayerNet':
+                    im = list(im.getdata())
+
                 # update the list of data and label
-                image_data = list(im.getdata())
-                normalized_image_data = np.array(image_data) / 255
+                normalized_image_data = np.array(im) / 255
                 datas.append(normalized_image_data)
                 labels.append(label)
+
             label += 1
 
     return datas, labels
 
-def load_trainval():
+def load_trainval(model_type):
     """
     Load training data with labels
     :return:
@@ -54,13 +58,13 @@ def load_trainval():
         val_label: A list containing the labels of validation data
     """
     print("Loading training data...")
-    data, label = load_images('data/train')
+    data, label = load_images('data/train', model_type)
     assert len(data) == len(label)
     print("Training data loaded with {count} images".format(count=len(data)))
 
     return data, label
 
-def load_test():
+def load_test(model_type):
     """
         Load  testing data with labels
         :return:
@@ -69,7 +73,7 @@ def load_test():
         """
     # Load training data
     print("Loading testing data...")
-    data, label = load_images('../test')
+    data, label = load_images('../test', model_type)
     assert len(data) == len(label)
     print("Testing data loaded with {count} images".format(count=len(data)))
 
@@ -115,83 +119,85 @@ def generate_batched_data(data, label, batch_size=32, shuffle=False, seed=None):
     return batched_data, batched_label
 
 
-def train(epoch, batched_train_data, batched_train_label, model, optimizer, debug=True):
+def train(model_type, epoch, batched_train_data, batched_train_label, model, optimizer, criterion, debug=True):
     """
     A training function that trains the model for one epoch
-    :param epoch: The index of current epoch
-    :param batched_train_data: A list containing batches of images
-    :param batched_train_label: A list containing batches of labels
-    :param model: The model to be trained
-    :param optimizer: The optimizer that updates the network weights
-    :return:
-        epoch_loss: The average loss of current epoch
-        epoch_acc: The overall accuracy of current epoch
     """
     epoch_loss = 0.0
-    hits = 0
-    count_samples = 0.0
+    total_correct = 0
+    total_size = 0.0
 
     for idx, (input, target) in enumerate(zip(batched_train_data, batched_train_label)):
 
         start_time = time.time()
 
-        loss, accuracy = model.forward(input, target)
-        optimizer.update(model)
+        if model_type == 'SoftmaxRegression' or model_type == 'TwoLayerNet':
+            loss, accuracy = model.forward(input, target)
+            optimizer.update(model)
+        elif model_type == 'CNN':
+            input = torch.tensor(input, dtype=torch.float32).to('cpu')
+            input = input.reshape(input.shape[0], 1, input.shape[1], input.shape[2])
+            target = torch.tensor(target).long().to('cpu')
+
+            optimizer.zero_grad()
+            output = model.forward(input)
+            loss = criterion(output, target)
+            loss.backward()
+            optimizer.step()
+
+            batch_size = target.shape[0]
+            _, pred = torch.max(output, dim=-1)
+            correct = pred.eq(target).sum() * 1.0
+            accuracy = correct / batch_size
 
         epoch_loss += loss
-        hits += accuracy * input.shape[0]
-        count_samples += input.shape[0]
+        total_correct += accuracy * input.shape[0]
+        total_size += input.shape[0]
 
         forward_time = time.time() - start_time
 
-        # if idx % 10 == 0 and debug:
-        #     print(('Epoch: [{0}][{1}/{2}]\t'
-        #            'Batch Time {batch_time:.3f} \t'
-        #            'Batch Loss {loss:.4f}\t'
-        #            'Train Accuracy ' + "{accuracy:.4f}" '\t').format(epoch, idx,
-        #                                                              len(batched_train_data),
-        #                                                              batch_time=forward_time,
-        #                                                              loss=loss, accuracy=accuracy))
-
     epoch_loss /= len(batched_train_data)
-    epoch_acc = hits / count_samples
+    epoch_acc = total_correct / total_size
 
     if debug:
         print("* Average Accuracy of Epoch {} is: {:.4f}".format(epoch, epoch_acc))
-
     return epoch_loss, epoch_acc
 
-
-def evaluate(batched_test_data, batched_test_label, model, debug=True):
+def evaluate(model_type, batched_test_data, batched_test_label, model, criterion, debug=True):
     """
     Evaluate the model on test data
-    :param batched_test_data: A list containing batches of test images
-    :param batched_test_label: A list containing batches of labels
-    :param model: A pre-trained model
-    :return:
-        epoch_loss: The average loss of current epoch
-        epoch_acc: The overall accuracy of current epoch
     """
     epoch_loss = 0.0
-    hits = 0
-    count_samples = 0.0
+    total_correct = 0
+    total_size = 0.0
 
-    for idx, (input, target) in enumerate(zip(batched_test_data, batched_test_label)):
+    if model_type == 'SoftmaxRegression' or model_type == 'TwoLayerNet':
+        for idx, (input, target) in enumerate(zip(batched_test_data, batched_test_label)):
+            loss, accuracy = model.forward(input, target, mode='valid')
 
-        loss, accuracy = model.forward(input, target, mode='valid')
+            epoch_loss += loss
+            total_correct += accuracy * input.shape[0]
+            total_size += input.shape[0]
 
-        epoch_loss += loss
-        hits += accuracy * input.shape[0]
-        count_samples += input.shape[0]
+    elif model_type == 'CNN':
+        model.eval()
+        with torch.no_grad():
+            for idx, (input, target) in enumerate(zip(batched_test_data, batched_test_label)):
+                input = torch.tensor(input, dtype=torch.float32).to('cpu')
+                input = input.reshape(input.shape[0], 1, input.shape[1], input.shape[2])
+                target = torch.tensor(target).long().to('cpu')
 
-        # if debug:
-        #     print(('Evaluate: [{0}/{1}]\t'
-        #            'Batch Accuracy ' +  "{accuracy:.4f}" '\t').format(idx,
-        #                                                               len(batched_test_data),
-        #                                                               accuracy=accuracy))
+                output = model.forward(input)
+                loss = criterion(output, target)
+
+                _, pred = torch.max(output, 1)
+
+                epoch_loss += loss
+                total_correct += pred.eq(target).sum() * 1.0
+                total_size += input.shape[0]
 
     epoch_loss /= len(batched_test_data)
-    epoch_acc = hits / count_samples
+    epoch_acc = total_correct / total_size
 
     return epoch_loss, epoch_acc
 
@@ -205,6 +211,6 @@ if __name__ == "__main__":
     # train_batched_data, train_batched_label = generate_batched_data(train_data, train_label)
     # val_batched_data, val_batched_label = generate_batched_data(val_data, val_label)
     # test_batched_data, test_batched_label = generate_batched_data(test_data, test_label)
-    print(train_data[0])
+    # print(train_data[0])
 
 

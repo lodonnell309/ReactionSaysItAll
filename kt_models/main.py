@@ -1,14 +1,16 @@
 import argparse
 import yaml
 import copy
+import torch
+import torch.nn as nn
 
-from models import TwoLayerNet, SoftmaxRegression
+from models import TwoLayerNet, SoftmaxRegression, CNN
 from optimizer import SGD
 from utils import load_trainval, load_test, generate_batched_data, train, evaluate#, plot_curves
 
 parser = argparse.ArgumentParser(description='CS7643 Project')
 parser.add_argument('--config', # required in the command line
-                    default='./config_exp.yaml')
+                    default='./configs/config_exp.yaml')
 
 
 def main():
@@ -28,18 +30,34 @@ def run():
         for k, v in config[key].items(): # train has batch_size, learning_rate, etc; model has type and hidden_size
             setattr(args, k, v) # https://docs.python.org/3/library/functions.html#setattr
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     # Prepare data
-    train_data, train_label = load_trainval()
-    test_data, test_label = load_test()
+    train_data, train_label = load_trainval(model_type=args.type)
+    test_data, test_label = load_test(model_type=args.type)
 
     # Create a model
     if args.type == 'SoftmaxRegression':
         model = SoftmaxRegression()
+        optimizer = SGD(learning_rate=args.learning_rate, reg=args.regularization_rate)
+        criterion = None
+
     elif args.type == 'TwoLayerNet':
         model = TwoLayerNet(hidden_size=args.hidden_size)
+        optimizer = SGD(learning_rate=args.learning_rate, reg=args.regularization_rate)
+        criterion = None
 
-    # Optimizer
-    optimizer = SGD(learning_rate=args.learning_rate, reg=args.regularization_rate)
+    elif args.type == "CNN":
+        model = CNN().to(device)
+        model = model
+        criterion = nn.CrossEntropyLoss().to(device)
+
+        optimizer = torch.optim.SGD(
+            model.parameters(),
+            lr = args.learning_rate,
+            weight_decay = args.regularization_rate
+        )
+
 
     train_loss_history = []
     train_acc_history = []
@@ -55,8 +73,9 @@ def run():
                                                                         batch_size=args.batch_size,
                                                                         shuffle=True,
                                                                         seed=1024)
-        epoch_loss, epoch_accuracy = train(epoch, batched_train_data, batched_train_label,
-                                           model, optimizer, args.debug)
+        epoch_loss, epoch_accuracy = train(args.type, epoch,
+                                           batched_train_data, batched_train_label,
+                                           model, optimizer, criterion, args.debug)
         train_loss_history.append(epoch_loss)
         train_acc_history.append(epoch_accuracy)
 
@@ -68,7 +87,7 @@ def run():
 
     batched_test_data, batched_test_label = generate_batched_data(test_data, test_label,
                                                                   batch_size=args.batch_size)
-    _, test_accuracy = evaluate(batched_test_data, batched_test_label, best_model)
+    _, test_accuracy = evaluate(args.type, batched_test_data, batched_test_label, best_model, criterion)
 
     if args.debug:
         print("Final Accuracy on Train Data: {accuracy:.4f}".format(accuracy=epoch_accuracy))
