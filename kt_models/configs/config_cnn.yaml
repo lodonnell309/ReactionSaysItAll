@@ -1,10 +1,13 @@
 Train:
-  batch_size: 64
+  batch_size: 128
   learning_rate: 0.05
   regularization_rate: 0.006
-  epochs: 15
+  epochs: 100
   debug: True
   momentum: 0.8
+  warmup: 5
+  steps: [60, 80]
+
 
 Model:
   type: CNN

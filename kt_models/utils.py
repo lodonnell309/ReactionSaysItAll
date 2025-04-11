@@ -7,6 +7,7 @@ from PIL import Image
 
 import matplotlib.pyplot as plt
 
+
 def load_images(path, model_type):
     """
     Load the images from all folders in that path, assign the same
@@ -19,6 +20,8 @@ def load_images(path, model_type):
     """
     datas = []
     labels = []
+    folders = []
+    files = []
 
     label = 0
 
@@ -26,7 +29,7 @@ def load_images(path, model_type):
 
     # access each folder
     for folder in os.listdir():
-
+        # print(folder)
         if '.' not in folder:
             images = os.listdir(folder)
 
@@ -43,10 +46,13 @@ def load_images(path, model_type):
                 normalized_image_data = np.array(im) / 255
                 datas.append(normalized_image_data)
                 labels.append(label)
+                folders.append(folder)
+                files.append(image)
 
             label += 1
 
-    return datas, labels
+    return datas, labels, folders, files
+
 
 def load_trainval(model_type):
     """
@@ -58,11 +64,12 @@ def load_trainval(model_type):
         val_label: A list containing the labels of validation data
     """
     print("Loading training data...")
-    data, label = load_images('data/train', model_type)
+    data, label, folder, file_name = load_images('data/train', model_type)
     assert len(data) == len(label)
     print("Training data loaded with {count} images".format(count=len(data)))
 
-    return data, label
+    return data, label, folder, file_name
+
 
 def load_test(model_type):
     """
@@ -73,13 +80,14 @@ def load_test(model_type):
         """
     # Load training data
     print("Loading testing data...")
-    data, label = load_images('../test', model_type)
+    data, label, folder, file_name = load_images('../test', model_type)
     assert len(data) == len(label)
     print("Testing data loaded with {count} images".format(count=len(data)))
 
-    return data, label
+    return data, label, folder, file_name
 
-def generate_batched_data(data, label, batch_size=32, shuffle=False, seed=None):
+
+def generate_batched_data(data, label, folder, file_name, batch_size=32, shuffle=False, seed=None):
     """
     Turn raw data into batched forms
     :param data: A list of list containing the data where each inner list contains 48x48
@@ -94,6 +102,8 @@ def generate_batched_data(data, label, batch_size=32, shuffle=False, seed=None):
     """
     batched_data = []
     batched_label = []
+    batched_folder = []
+    batched_file = []
     if seed:
         random.seed(seed)
         np.random.seed(seed)
@@ -103,23 +113,30 @@ def generate_batched_data(data, label, batch_size=32, shuffle=False, seed=None):
         random.shuffle(indices)
         data = np.array(data)[indices]
         label = np.array(label)[indices]
+        folder = np.array(folder)[indices]
+        file_name = np.array(file_name)[indices]
     else:
         data = np.array(data)
         label = np.array(label)
+        folder = np.array(folder)
+        file_name = np.array(file_name)
 
     for starting in range(0, len(data), batch_size):
-        ending = min(starting + batch_size, len(data) - 1)
-
-        to_batch_data = data[starting : ending]
+        ending = min(starting + batch_size, len(data))
+        to_batch_data = data[starting: ending]
         to_batch_label = label[starting: ending]
-
+        to_batch_folder = folder[starting: ending]
+        to_batch_file = file_name[starting: ending]
         batched_data.append(to_batch_data)
         batched_label.append(to_batch_label)
+        batched_folder.append(to_batch_folder)
+        batched_file.append(to_batch_file)
 
-    return batched_data, batched_label
+    return batched_data, batched_label, batched_folder, batched_file
 
 
-def train(model_type, epoch, batched_train_data, batched_train_label, model, optimizer, criterion, debug=True):
+def train(model_type, epoch, batched_train_data, batched_train_label, batched_folder, batched_file, model, optimizer,
+          criterion, debug=True):
     """
     A training function that trains the model for one epoch
     """
@@ -129,7 +146,8 @@ def train(model_type, epoch, batched_train_data, batched_train_label, model, opt
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    for idx, (input, target) in enumerate(zip(batched_train_data, batched_train_label)):
+    for idx, (input, target, folder, file_name) in enumerate(
+            zip(batched_train_data, batched_train_label, batched_folder, batched_file)):
 
         start_time = time.time()
 
@@ -165,7 +183,9 @@ def train(model_type, epoch, batched_train_data, batched_train_label, model, opt
         print("* Average Accuracy of Epoch {} is: {:.4f}".format(epoch, epoch_acc))
     return epoch_loss, epoch_acc
 
-def evaluate(model_type, batched_test_data, batched_test_label, model, criterion, debug=True):
+
+def evaluate(model_type, batched_test_data, batched_test_label, batched_folder, batched_file, model, criterion,
+             debug=True):
     """
     Evaluate the model on test data
     """
