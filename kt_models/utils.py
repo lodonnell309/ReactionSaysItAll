@@ -127,6 +127,8 @@ def train(model_type, epoch, batched_train_data, batched_train_label, model, opt
     total_correct = 0
     total_size = 0.0
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     for idx, (input, target) in enumerate(zip(batched_train_data, batched_train_label)):
 
         start_time = time.time()
@@ -135,9 +137,9 @@ def train(model_type, epoch, batched_train_data, batched_train_label, model, opt
             loss, accuracy = model.forward(input, target)
             optimizer.update(model)
         elif model_type == 'CNN':
-            input = torch.tensor(input, dtype=torch.float32).to('cpu')
+            input = torch.tensor(input, dtype=torch.float32).to(device)
             input = input.reshape(input.shape[0], 1, input.shape[1], input.shape[2])
-            target = torch.tensor(target).long().to('cpu')
+            target = torch.tensor(target).long().to(device)
 
             optimizer.zero_grad()
             output = model.forward(input)
@@ -170,6 +172,7 @@ def evaluate(model_type, batched_test_data, batched_test_label, model, criterion
     epoch_loss = 0.0
     total_correct = 0
     total_size = 0.0
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     if model_type == 'SoftmaxRegression' or model_type == 'TwoLayerNet':
         for idx, (input, target) in enumerate(zip(batched_test_data, batched_test_label)):
@@ -183,9 +186,9 @@ def evaluate(model_type, batched_test_data, batched_test_label, model, criterion
         model.eval()
         with torch.no_grad():
             for idx, (input, target) in enumerate(zip(batched_test_data, batched_test_label)):
-                input = torch.tensor(input, dtype=torch.float32).to('cpu')
+                input = torch.tensor(input, dtype=torch.float32).to(device)
                 input = input.reshape(input.shape[0], 1, input.shape[1], input.shape[2])
-                target = torch.tensor(target).long().to('cpu')
+                target = torch.tensor(target).long().to(device)
 
                 output = model.forward(input)
                 loss = criterion(output, target)
