@@ -56,6 +56,7 @@ def run():
             model.parameters(),
             lr = args.learning_rate,
             weight_decay = args.regularization_rate
+            , momentum = args.momentum
         )
 
 
