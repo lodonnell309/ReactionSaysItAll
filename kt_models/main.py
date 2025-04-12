@@ -1,23 +1,36 @@
 import argparse
 import yaml
 import copy
+import numpy
 import torch
 import torch.nn as nn
+import torchvision.transforms as transforms
 
 from models import TwoLayerNet, SoftmaxRegression, CNN
 from optimizer import SGD
-from utils import load_trainval, load_test, generate_batched_data, train, evaluate, plot_curves
+from utils import load_trainval, load_test, generate_batched_data, train, evaluate, plot_curves, lets_predict
 
 parser = argparse.ArgumentParser(description='CS7643 Project')
 parser.add_argument('--config',  # required in the command line
                     default='./configs/config_exp.yaml')
+parser.add_argument('--final_file_name',  # required in the command line
+                    default=None)
 
 
 def main():
-    train_loss_history, train_acc_history, valid_loss_history, valid_acc_history = run()
+    train_loss_history, train_acc_history, valid_loss_history, valid_acc_history, best_model, resize_image_transform, folders = run()
 
     plot_curves(train_loss_history, train_acc_history, valid_loss_history, valid_acc_history,
                 lr = args.learning_rate, r = args.regularization_rate)
+
+    if max(valid_acc_history) > 0.3 and args.final_file_name != None:
+        the_image = args.final_file_name
+
+        pred = lets_predict(best_model, resize_image_transform,
+                            real_life_file = the_image,
+                            model_type = args.type)
+
+        print('Predicted emotion for '+the_image+' : '+folders[pred])
 
 
 def run():
@@ -33,7 +46,7 @@ def run():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Prepare data
-    train_data, train_label, val_data, val_label = load_trainval(model_type=args.type, shuffle=True, seed=1024)
+    train_data, train_label, val_data, val_label, folders = load_trainval(model_type=args.type, shuffle=True, seed=1024)
 
     test_data, test_label = load_test(model_type=args.type)
 
@@ -57,6 +70,16 @@ def run():
             lr=args.learning_rate,
             weight_decay=args.regularization_rate,
             momentum = args.momentum
+        )
+
+        # Adjust the real-life images to fit my model's setup
+        # Resize or Crop Input Images
+        resize_image_transform = transforms.Compose(
+            [
+                transforms.Resize((48, 48)),  # force image to match training size
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.5], std=[0.5])  # match training normalization
+            ]
         )
 
     train_loss_history = []
@@ -119,7 +142,8 @@ def run():
         print("Final Accuracy on Train Data: {accuracy:.4f}".format(accuracy=epoch_accuracy))
         print("Final Accuracy on Test Data: {accuracy:.4f}".format(accuracy=test_accuracy))
 
-    return train_loss_history, train_acc_history, valid_loss_history, valid_acc_history
+    return (train_loss_history, train_acc_history, valid_loss_history, valid_acc_history,
+            best_model, resize_image_transform, folders)
 
 
 if __name__ == '__main__':
