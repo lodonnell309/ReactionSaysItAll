@@ -1,12 +1,12 @@
 Train:
-  batch_size: 128
+  batch_size: 400
   learning_rate: 0.05
   regularization_rate: 0.006
-  epochs: 100
+  epochs: 200
   debug: True
   momentum: 0.8
-  warmup: 5
-  steps: [60, 80]
+  warmup: 10
+  steps: [120, 160]
 
 
 Model:

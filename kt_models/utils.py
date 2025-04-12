@@ -25,17 +25,14 @@ def load_images(path, model_type):
 
     label = 0
 
-    os.chdir(path)
-
     # access each folder
-    for folder in os.listdir():
-        # print(folder)
+    for folder in os.listdir(path):
         if '.' not in folder:
-            images = os.listdir(folder)
+            images = os.listdir(path + '/' + folder)
 
             # access each image
             for image in images:
-                image_path = folder + '/' + image
+                image_path = path + '/' + folder + '/' + image
                 # get the RGB value of image
                 im = Image.open(image_path)
 
@@ -46,15 +43,13 @@ def load_images(path, model_type):
                 normalized_image_data = np.array(im) / 255
                 datas.append(normalized_image_data)
                 labels.append(label)
-                folders.append(folder)
-                files.append(image)
 
             label += 1
 
-    return datas, labels, folders, files
+    return datas, labels
 
 
-def load_trainval(model_type):
+def load_trainval(model_type, shuffle=False, seed=None):
     """
     Load training data with labels
     :return:
@@ -64,11 +59,34 @@ def load_trainval(model_type):
         val_label: A list containing the labels of validation data
     """
     print("Loading training data...")
-    data, label, folder, file_name = load_images('data/train', model_type)
+    data, label = load_images('data/train', model_type)
     assert len(data) == len(label)
-    print("Training data loaded with {count} images".format(count=len(data)))
 
-    return data, label, folder, file_name
+    total_count = len(data)
+    train_ct = int(total_count * 0.7)
+
+    if seed:
+        random.seed(seed)
+        np.random.seed(seed)
+
+    if shuffle:
+        indices = np.arange(len(data))
+        random.shuffle(indices)
+        data = np.array(data)[indices]
+        label = np.array(label)[indices]
+    else:
+        data = np.array(data)
+        label = np.array(label)
+
+    train_data = data[:train_ct]
+    train_label = label[:train_ct]
+    val_data = data[train_ct:]
+    val_label = label[train_ct:]
+
+    print("Training data loaded with {count} images".format(count=len(train_data)))
+    print("Validation data loaded with {count} images".format(count=len(val_data)))
+
+    return train_data, train_label, val_data, val_label
 
 
 def load_test(model_type):
@@ -80,14 +98,14 @@ def load_test(model_type):
         """
     # Load training data
     print("Loading testing data...")
-    data, label, folder, file_name = load_images('../test', model_type)
+    data, label = load_images('data/test', model_type)
     assert len(data) == len(label)
     print("Testing data loaded with {count} images".format(count=len(data)))
 
-    return data, label, folder, file_name
+    return data, label
 
 
-def generate_batched_data(data, label, folder, file_name, batch_size=32, shuffle=False, seed=None):
+def generate_batched_data(data, label, batch_size=32):
     """
     Turn raw data into batched forms
     :param data: A list of list containing the data where each inner list contains 48x48
@@ -102,52 +120,32 @@ def generate_batched_data(data, label, folder, file_name, batch_size=32, shuffle
     """
     batched_data = []
     batched_label = []
-    batched_folder = []
-    batched_file = []
-    if seed:
-        random.seed(seed)
-        np.random.seed(seed)
-
-    if shuffle:
-        indices = np.arange(len(data))
-        random.shuffle(indices)
-        data = np.array(data)[indices]
-        label = np.array(label)[indices]
-        folder = np.array(folder)[indices]
-        file_name = np.array(file_name)[indices]
-    else:
-        data = np.array(data)
-        label = np.array(label)
-        folder = np.array(folder)
-        file_name = np.array(file_name)
 
     for starting in range(0, len(data), batch_size):
         ending = min(starting + batch_size, len(data))
         to_batch_data = data[starting: ending]
         to_batch_label = label[starting: ending]
-        to_batch_folder = folder[starting: ending]
-        to_batch_file = file_name[starting: ending]
         batched_data.append(to_batch_data)
         batched_label.append(to_batch_label)
-        batched_folder.append(to_batch_folder)
-        batched_file.append(to_batch_file)
 
-    return batched_data, batched_label, batched_folder, batched_file
+    return batched_data, batched_label
 
 
-def train(model_type, epoch, batched_train_data, batched_train_label, batched_folder, batched_file, model, optimizer,
+def train(model_type, epoch, batched_train_data, batched_train_label, model, optimizer,
           criterion, debug=True):
     """
     A training function that trains the model for one epoch
     """
+    model.train()
+
     epoch_loss = 0.0
     total_correct = 0
     total_size = 0.0
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    for idx, (input, target, folder, file_name) in enumerate(
-            zip(batched_train_data, batched_train_label, batched_folder, batched_file)):
+    for idx, (input, target) in enumerate(
+            zip(batched_train_data, batched_train_label)):
 
         start_time = time.time()
 
@@ -184,14 +182,17 @@ def train(model_type, epoch, batched_train_data, batched_train_label, batched_fo
     return epoch_loss, epoch_acc
 
 
-def evaluate(model_type, batched_test_data, batched_test_label, batched_folder, batched_file, model, criterion,
+def evaluate(model_type, batched_test_data, batched_test_label, model, criterion,
              debug=True):
     """
-    Evaluate the model on test data
+    Evaluate the model on validaiton and test data
     """
+    model.eval()
+
     epoch_loss = 0.0
     total_correct = 0
     total_size = 0.0
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     if model_type == 'SoftmaxRegression' or model_type == 'TwoLayerNet':
@@ -203,7 +204,7 @@ def evaluate(model_type, batched_test_data, batched_test_label, batched_folder, 
             total_size += input.shape[0]
 
     elif model_type == 'CNN':
-        model.eval()
+
         with torch.no_grad():
             for idx, (input, target) in enumerate(zip(batched_test_data, batched_test_label)):
                 input = torch.tensor(input, dtype=torch.float32).to(device)
@@ -225,7 +226,40 @@ def evaluate(model_type, batched_test_data, batched_test_label, batched_folder, 
     return epoch_loss, epoch_acc
 
 
-# def plot_curves
+def plot_curves(train_loss_history, train_acc_history, valid_loss_history, valid_acc_history, lr, r):
+    """
+    Plot learning curves with matplotlib. Make sure training loss and validation loss are plot in the same figure and
+    training accuracy and validation accuracy are plot in the same figure too.
+    :param train_loss_history: training loss history of epochs
+    :param train_acc_history: training accuracy history of epochs
+    :param valid_loss_history: validation loss history of epochs
+    :param valid_acc_history: validation accuracy history of epochs
+    :return: None, save two figures in the current directory
+    """
+    plt.plot([i for i in range(len(train_loss_history))],
+             [train_loss_history[i].item() for i in range(len(train_loss_history))],
+             label='Train')
+    plt.plot([i for i in range(len(valid_loss_history))],
+             [valid_loss_history[i].item() for i in range(len(valid_loss_history))],
+             label='Valid')
+    plt.legend(loc='upper right')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.title('Loss Curve')
+    plt.savefig('learning_loss_curve.png')
+
+    plt.figure(0)
+    plt.plot([i for i in range(len(train_acc_history))],
+             [train_acc_history[i].item() for i in range(len(train_acc_history))],
+             label='Train')
+    plt.plot([i for i in range(len(valid_acc_history))],
+             [valid_acc_history[i].item() for i in range(len(valid_acc_history))],
+             label='Valid')
+    plt.legend(loc='upper right')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.title('Accuracy Curve')
+    plt.savefig('learning_accuracy_curve.png')
 
 
 if __name__ == "__main__":
