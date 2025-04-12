@@ -8,7 +8,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 
-def load_images(path, model_type):
+def load_images(image_file, model_type, transform=False):
     """
     Load the images from all folders in that path, assign the same
     numeric value to images in the same folder
@@ -18,35 +18,20 @@ def load_images(path, model_type):
               corresponding to the pixels in each image
         labels: A list containing labels of images
     """
-    datas = []
-    labels = []
-    folders = []
-    files = []
+    # get the RGB value of image
+    im = Image.open(image_file)
 
-    label = 0
+    if transform != False:
+        gray_image = im.convert("L")
+        # Apply the transform
+        output = transform(gray_image)
+    else:
+      if model_type == 'SoftmaxRegression' or model_type == 'TwoLayerNet':
+        im = list(im.getdata())
+      # update the list of data and label
+      output = np.array(im) / 255
 
-    # access each folder
-    for folder in os.listdir(path):
-        if '.' not in folder:
-            images = os.listdir(path + '/' + folder)
-
-            # access each image
-            for image in images:
-                image_path = path + '/' + folder + '/' + image
-                # get the RGB value of image
-                im = Image.open(image_path)
-
-                if model_type == 'SoftmaxRegression' or model_type == 'TwoLayerNet':
-                    im = list(im.getdata())
-
-                # update the list of data and label
-                normalized_image_data = np.array(im) / 255
-                datas.append(normalized_image_data)
-                labels.append(label)
-
-            label += 1
-
-    return datas, labels
+    return output
 
 
 def load_trainval(model_type, shuffle=False, seed=None):
@@ -59,7 +44,29 @@ def load_trainval(model_type, shuffle=False, seed=None):
         val_label: A list containing the labels of validation data
     """
     print("Loading training data...")
-    data, label = load_images('data/train', model_type)
+
+    data = []
+    label = []
+    folders = []
+
+    l = 0
+    path = 'data/train'
+
+    # access each folder
+    for folder in os.listdir(path):
+        if '.' not in folder:
+            folders.append(folder)
+            images = os.listdir(path + '/' + folder)
+
+            # access each image
+            for image in images:
+                image_file = path + '/' + folder + '/' + image
+                normalized_image_data = load_images(image_file, model_type)
+                data.append(normalized_image_data)
+                label.append(l)
+
+            l += 1
+
     assert len(data) == len(label)
 
     total_count = len(data)
@@ -86,7 +93,7 @@ def load_trainval(model_type, shuffle=False, seed=None):
     print("Training data loaded with {count} images".format(count=len(train_data)))
     print("Validation data loaded with {count} images".format(count=len(val_data)))
 
-    return train_data, train_label, val_data, val_label
+    return train_data, train_label, val_data, val_label, folders
 
 
 def load_test(model_type):
@@ -96,9 +103,27 @@ def load_test(model_type):
             data: A list of list containing the testing data
             label: A list containing the labels of testing data
         """
-    # Load training data
     print("Loading testing data...")
-    data, label = load_images('data/test', model_type)
+    data = []
+    label = []
+
+    l = 0
+    path = 'data/test'
+
+    # access each folder
+    for folder in os.listdir(path):
+        if '.' not in folder:
+            images = os.listdir(path + '/' + folder)
+
+            # access each image
+            for image in images:
+                image_file = path + '/' + folder + '/' + image
+                normalized_image_data = load_images(image_file, model_type)
+                data.append(normalized_image_data)
+                label.append(l)
+
+            l += 1
+
     assert len(data) == len(label)
     print("Testing data loaded with {count} images".format(count=len(data)))
 
@@ -154,7 +179,7 @@ def train(model_type, epoch, batched_train_data, batched_train_label, model, opt
             optimizer.update(model)
         elif model_type == 'CNN':
             input = torch.tensor(input, dtype=torch.float32).to(device)
-            input = input.reshape(input.shape[0], 1, input.shape[1], input.shape[2])
+            input = input.unsqueeze(1)
             target = torch.tensor(target).long().to(device)
 
             optimizer.zero_grad()
@@ -208,7 +233,7 @@ def evaluate(model_type, batched_test_data, batched_test_label, model, criterion
         with torch.no_grad():
             for idx, (input, target) in enumerate(zip(batched_test_data, batched_test_label)):
                 input = torch.tensor(input, dtype=torch.float32).to(device)
-                input = input.reshape(input.shape[0], 1, input.shape[1], input.shape[2])
+                input = input.unsqueeze(1)
                 target = torch.tensor(target).long().to(device)
 
                 output = model.forward(input)
@@ -261,6 +286,23 @@ def plot_curves(train_loss_history, train_acc_history, valid_loss_history, valid
     plt.title('Accuracy Curve')
     plt.savefig('learning_accuracy_curve.png')
 
+def lets_predict(model, resize_image_transform, real_life_file, model_type):
+    model.eval()
+
+    image_tensor = load_images(real_life_file, model_type, transform=resize_image_transform)
+
+    if model_type == 'SoftmaxRegression':
+        return None
+    elif model_type == 'TwoLayerNet':
+        return None
+    elif model_type == "CNN":
+        image_tensor = image_tensor.unsqueeze(1)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        image_tensor = image_tensor.to(device)
+        with torch.no_grad():
+            output = model(image_tensor)
+            _, pred = torch.max(output, dim=1)
+    return pred
 
 if __name__ == "__main__":
     train_data, train_label = load_trainval()
