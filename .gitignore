@@ -1,2 +1,4 @@
 .DS_Store
 response_model/t5-emotion-dialogue-final/model.safetensors
+.venv/
+__pycache__/
