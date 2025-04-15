@@ -1,0 +1,4 @@
+batch_size: 64
+dropout: 0.27692002240364355
+early_stop_patience: 5
+lr: 0.00866149357860099

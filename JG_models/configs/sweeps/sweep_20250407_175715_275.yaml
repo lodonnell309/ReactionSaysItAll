@@ -1,0 +1,28 @@
+data:
+  augment: false
+  batch_size: 128
+  num_workers: 4
+  root: data/fer2013
+loss:
+  class_counts:
+  - 3995
+  - 436
+  - 4097
+  - 7215
+  - 4965
+  - 4830
+  - 3171
+  use_class_weights: true
+network:
+  dropout: 0.2
+  input_size: 48
+  model: cnn
+  num_classes: 7
+seed: 97
+train:
+  checkpoint_dir: outputs/checkpoints/
+  early_stop_patience: 3
+  log_dir: outputs/logs/
+  lr: 0.001
+  num_epochs: 50
+  weight_decay: 0.0

@@ -1,0 +1,28 @@
+data:
+  batch_size: 32
+  num_workers: 4
+  root: data/fer2013
+loss:
+  class_counts:
+  - 3995
+  - 436
+  - 4097
+  - 7215
+  - 4965
+  - 4830
+  - 3171
+  focal_gamma: 0.001
+  loss_type: focal
+  use_class_weights: true
+network:
+  dropout: 0.27
+  input_size: 48
+  model: cnn
+  num_classes: 7
+seed: 112358
+train:
+  checkpoint_dir: outputs/checkpoints/
+  early_stop_patience: 5
+  log_dir: outputs/logs/
+  lr: 0.0086
+  num_epochs: 50

@@ -1,0 +1,29 @@
+seed: 112358
+
+data:
+  root: data/fer2013 # for pre trained data: data/fer2013_pt
+  num_workers: 4
+  batch_size: 64
+
+train:
+  num_epochs: 50
+  lr: 0.0086
+  checkpoint_dir: outputs/checkpoints/
+  log_dir: outputs/logs/
+  early_stop_patience: 3
+
+network:
+  model_file: base_model
+  model_class: EmotionCNN
+  num_classes: 7
+  dropout: 0.27
+  input_size: 48
+
+loss:
+  type: focal        # or "cross_entropy"
+  gamma: 0
+  use_class_weights: true
+  class_counts: [3995, 436, 4097, 7215, 4965, 4830, 3171]
+
+
+
