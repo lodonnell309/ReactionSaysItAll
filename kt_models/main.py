@@ -21,7 +21,7 @@ def main():
     train_loss_history, train_acc_history, valid_loss_history, valid_acc_history, best_model, resize_image_transform, folders = run()
 
     plot_curves(train_loss_history, train_acc_history, valid_loss_history, valid_acc_history,
-                lr = args.learning_rate, r = args.regularization_rate)
+                lr = args.learning_rate, r = args.regularization_rate, model_type = args.type)
 
     if max(valid_acc_history) > 0.3 and args.final_file_name != None:
         the_image = args.final_file_name
@@ -49,17 +49,17 @@ def run():
     train_data, train_label, val_data, val_label, folders = load_trainval(model_type=args.type, shuffle=True, seed=1024)
 
     test_data, test_label = load_test(model_type=args.type)
+    resize_image_transform = None
+    criterion = None
 
     # Create a model
     if args.type == 'SoftmaxRegression':
         model = SoftmaxRegression()
         optimizer = SGD(learning_rate=args.learning_rate, reg=args.regularization_rate)
-        criterion = None
 
     elif args.type == 'TwoLayerNet':
         model = TwoLayerNet(hidden_size=args.hidden_size)
         optimizer = SGD(learning_rate=args.learning_rate, reg=args.regularization_rate)
-        criterion = None
 
     elif args.type == "CNN":
         model = CNN().to(device)
@@ -93,25 +93,26 @@ def run():
     for epoch in range(args.epochs):
         print("Epoch: {epoch_num}".format(epoch_num=epoch))
 
-        # adjust learning rate
-        temp_epoch = epoch + 1
-        if temp_epoch <= args.warmup:
-            lr = args.learning_rate * temp_epoch / args.warmup
-        elif temp_epoch > args.steps[1]:
-            lr = args.learning_rate * 0.01
-        elif temp_epoch > args.steps[0]:
-            lr = args.learning_rate * 0.1
-        else:
-            lr = args.learning_rate
-        for param_group in optimizer.param_groups:
-            param_group["lr"] = lr
+        if args.type == "CNN":
+            # adjust learning rate
+            temp_epoch = epoch + 1
+            if temp_epoch <= args.warmup:
+                lr = args.learning_rate * temp_epoch / args.warmup
+            elif temp_epoch > args.steps[1]:
+                lr = args.learning_rate * 0.01
+            elif temp_epoch > args.steps[0]:
+                lr = args.learning_rate * 0.1
+            else:
+                lr = args.learning_rate
+            for param_group in optimizer.param_groups:
+                param_group["lr"] = lr
 
         # train on the train data and get the model
         batched_train_data, batched_train_label = generate_batched_data(train_data, train_label,
                                                                         batch_size=args.batch_size)
-        epoch_loss, epoch_accuracy = train(args.type, epoch,
-                                           batched_train_data, batched_train_label,
-                                           model, optimizer, criterion, args.debug)
+        epoch_loss, epoch_accuracy, runtime = train(args.type, epoch,
+                                                    batched_train_data, batched_train_label,
+                                                    model, optimizer, criterion, args.debug)
         train_loss_history.append(epoch_loss)
         train_acc_history.append(epoch_accuracy)
 
@@ -139,6 +140,7 @@ def run():
                                 best_model, criterion)
 
     if args.debug:
+        print("Average Runtime per Epoch: {x}".format(x =sum(runtime) / len(runtime)))
         print("Final Accuracy on Train Data: {accuracy:.4f}".format(accuracy=epoch_accuracy))
         print("Final Accuracy on Test Data: {accuracy:.4f}".format(accuracy=test_accuracy))
 

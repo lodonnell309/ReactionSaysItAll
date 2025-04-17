@@ -29,16 +29,6 @@ class TwoLayerNet():
         The forward pass of the two-layer net. The activation function used in between the two layers
         is sigmoid, which is to be implemented in self.,sigmoid.
         The method forward should compute the loss of input batch X and gradients of each weights.
-        Further, it should also compute the accuracy of given batch. The loss and
-        accuracy are returned by the method and gradients are stored in self.gradients
-
-        :param X: a batch of images (N, input_size)
-        :param y: labels of images in the batch (N,)
-        :param mode: if mode is training, compute and update gradients;else, just return the loss and accuracy
-        :return:
-            loss: the loss associated with the batch
-            accuracy: the accuracy of the batch
-            self.gradients: gradients are not explicitly returned but rather updated in the class member self.gradients
         """
 
         w1 = self.weights['W1']
@@ -99,9 +89,5 @@ class TwoLayerNet():
         # loss w.r.t. W1
         loss_wrt_W1 = X.T @ loss_wrt_Z
         self.gradients['W1'] = loss_wrt_W1
-
-        #############################################################################
-        #                              END OF YOUR CODE                             #
-        #############################################################################
 
         return loss, accuracy
