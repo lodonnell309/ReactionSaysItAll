@@ -127,6 +127,9 @@ def load_test(model_type):
     assert len(data) == len(label)
     print("Testing data loaded with {count} images".format(count=len(data)))
 
+    data = np.array(data)
+    label = np.array(label)
+
     return data, label
 
 
@@ -161,11 +164,11 @@ def train(model_type, epoch, batched_train_data, batched_train_label, model, opt
     """
     A training function that trains the model for one epoch
     """
-    model.train()
 
     epoch_loss = 0.0
     total_correct = 0
     total_size = 0.0
+    runtime = []
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -177,7 +180,10 @@ def train(model_type, epoch, batched_train_data, batched_train_label, model, opt
         if model_type == 'SoftmaxRegression' or model_type == 'TwoLayerNet':
             loss, accuracy = model.forward(input, target)
             optimizer.update(model)
+
         elif model_type == 'CNN':
+            model.train()
+
             input = torch.tensor(input, dtype=torch.float32).to(device)
             input = input.unsqueeze(1)
             target = torch.tensor(target).long().to(device)
@@ -197,14 +203,14 @@ def train(model_type, epoch, batched_train_data, batched_train_label, model, opt
         total_correct += accuracy * input.shape[0]
         total_size += input.shape[0]
 
-        forward_time = time.time() - start_time
+        runtime.append(time.time() - start_time)
 
     epoch_loss /= len(batched_train_data)
     epoch_acc = total_correct / total_size
 
     if debug:
         print("* Average Accuracy of Epoch {} is: {:.4f}".format(epoch, epoch_acc))
-    return epoch_loss, epoch_acc
+    return epoch_loss, epoch_acc, runtime
 
 
 def evaluate(model_type, batched_test_data, batched_test_label, model, criterion,
@@ -212,7 +218,6 @@ def evaluate(model_type, batched_test_data, batched_test_label, model, criterion
     """
     Evaluate the model on validaiton and test data
     """
-    model.eval()
 
     epoch_loss = 0.0
     total_correct = 0
@@ -229,6 +234,7 @@ def evaluate(model_type, batched_test_data, batched_test_label, model, criterion
             total_size += input.shape[0]
 
     elif model_type == 'CNN':
+        model.eval()
 
         with torch.no_grad():
             for idx, (input, target) in enumerate(zip(batched_test_data, batched_test_label)):
@@ -251,7 +257,7 @@ def evaluate(model_type, batched_test_data, batched_test_label, model, criterion
     return epoch_loss, epoch_acc
 
 
-def plot_curves(train_loss_history, train_acc_history, valid_loss_history, valid_acc_history, lr, r):
+def plot_curves(train_loss_history, train_acc_history, valid_loss_history, valid_acc_history, lr, r, model_type):
     """
     Plot learning curves with matplotlib. Make sure training loss and validation loss are plot in the same figure and
     training accuracy and validation accuracy are plot in the same figure too.
@@ -271,7 +277,7 @@ def plot_curves(train_loss_history, train_acc_history, valid_loss_history, valid
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.title('Loss Curve')
-    plt.savefig('learning_loss_curve.png')
+    plt.savefig('outputs/learning_loss_curve_'+model_type+'.png')
 
     plt.figure(0)
     plt.plot([i for i in range(len(train_acc_history))],
@@ -284,7 +290,7 @@ def plot_curves(train_loss_history, train_acc_history, valid_loss_history, valid
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
     plt.title('Accuracy Curve')
-    plt.savefig('learning_accuracy_curve.png')
+    plt.savefig('outputs/learning_accuracy_curve_'+model_type+'.png')
 
 def lets_predict(model, resize_image_transform, real_life_file, model_type):
     model.eval()
