@@ -6,15 +6,14 @@ data:
   batch_size: 64
 
 train:
-  num_epochs: 50
+  num_epochs: 200
   lr: 0.0086
   checkpoint_dir: outputs/checkpoints/
   log_dir: outputs/logs/
-  early_stop_patience: 3
+  early_stop_patience: 100
 
 network:
-  model_file: base_model
-  model_class: EmotionCNN
+  model: cnn
   num_classes: 7
   dropout: 0.27
   input_size: 48

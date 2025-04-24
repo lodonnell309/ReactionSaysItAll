@@ -1,0 +1,29 @@
+import sys
+import os
+import torch
+from torchviz import make_dot
+
+# Fix import path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from models.base_model import EmotionCNN
+
+# Initialize model
+model = EmotionCNN()
+
+# Dummy input (batch size 1, grayscale 48x48)
+x = torch.randn(1, 1, 48, 48)
+
+# Forward pass
+y = model(x)
+
+# Make graph with bigger font and layout
+dot = make_dot(y, params=dict(model.named_parameters()), show_attrs=True)
+dot.graph_attr.update(rankdir='TB', fontsize='20')
+dot.node_attr.update(fontsize='16')
+dot.attr(size='10')  # Size string like '10', '12,8', etc
+
+# Save to outputs/
+os.makedirs("outputs", exist_ok=True)
+dot.render("outputs/emotion_cnn_forward", format="png")
+
+print("✅ Saved readable forward graph to outputs/emotion_cnn_forward.png")

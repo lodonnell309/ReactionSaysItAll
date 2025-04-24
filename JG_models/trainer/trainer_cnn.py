@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from torch.nn import functional as F
 from utils.train_eval import log_experiment
-import importlib
 
 class FocalLoss(nn.Module):
     def __init__(self, alpha=None, gamma=2.0):
@@ -39,13 +38,7 @@ class CNNTrainer:
             input_size=self.cfg.network.input_size
         )
 
-        #self.model = EmotionCNN(num_classes=self.cfg.network.num_classes, dropout=self.cfg.network.dropout).to(self.device)
-        model_module = importlib.import_module(f"models.{config.network.model_file}")
-        model_class = getattr(model_module, config.network.model_class)
-        self.model = model_class(
-            num_classes=config.network.num_classes,
-            dropout=config.network.dropout
-        ).to(self.device)
+        self.model = EmotionCNN(num_classes=self.cfg.network.num_classes, dropout=self.cfg.network.dropout).to(self.device)
 
         if self.cfg.loss.use_class_weights:
             class_counts = torch.tensor(self.cfg.loss.class_counts, dtype=torch.float32)
