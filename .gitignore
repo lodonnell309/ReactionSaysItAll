@@ -2,3 +2,7 @@
 response_model/t5-emotion-dialogue-final/model.safetensors
 .venv/
 __pycache__/
+api_key.env
+api_key.py
+response_model/api_key.yaml
+*.jpg

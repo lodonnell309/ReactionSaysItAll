@@ -1,8 +1,9 @@
 from flask import Flask, render_template, request, jsonify
-from response_model.call_language_model import get_random_msg
+from response_model.call_language_model import query_model, get_random_msg
 import base64
 import os
 import time
+from response_model.query_gemini import get_gemini_response
 
 app = Flask(__name__)
 
@@ -11,15 +12,31 @@ UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
+
 @app.route('/get_message', methods=['GET'])
 def get_message():
-    # Fetch the random message using the get_random_msg function
-    message = get_random_msg()
-    return jsonify({"message": message})
+    # Get a random message as the trigger message
+    random_msg = get_random_msg()
+    random_msg = 'Lets go running today!'
+    gemini = True
+
+    if gemini:
+        response = get_gemini_response(emotion='Sad',context = random_msg)
+    else:
+        # Use the language model to generate a response with neutral emotion
+        response = query_model(emotion='angry', text_message=random_msg)
+
+    return jsonify({
+        "message": response,
+        "original_message": random_msg,
+        "emotion": "neutral"  # For now, we're using neutral emotion
+    })
+
 
 @app.route('/capture_photo', methods=['POST'])
 def capture_photo():
@@ -39,6 +56,7 @@ def capture_photo():
 
         return jsonify({"success": True, "filename": image_filename}), 200
     return jsonify({"success": False, "error": "No image data received"}), 400
+
 
 if __name__ == "__main__":
     app.run(debug=True)

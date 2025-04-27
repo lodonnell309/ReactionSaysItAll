@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 function IPhoneMessageApp() {
-  const [message, setMessage] = useState("Get Ready...");
+  const [responseMessage, setResponseMessage] = useState("Get Ready...");
+  const [originalMessage, setOriginalMessage] = useState("How are you feeling today?");
+  const [emotion, setEmotion] = useState("neutral");
   const [photoTaken, setPhotoTaken] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -22,11 +24,17 @@ function IPhoneMessageApp() {
 
     startWebcam();
 
-    // Fetch random message from backend
+    // Fetch message from backend
     fetch("/get_message")
       .then(response => response.json())
       .then(data => {
-        setMessage(data.message);
+        setResponseMessage(data.message);
+        if (data.original_message) {
+          setOriginalMessage(data.original_message);
+        }
+        if (data.emotion) {
+          setEmotion(data.emotion);
+        }
         // Set timeout to take photo after message is displayed
         setTimeout(() => {
           takeSnapshot();
@@ -35,7 +43,7 @@ function IPhoneMessageApp() {
       .catch(error => {
         console.error("Error fetching message:", error);
         // Fallback message if fetch fails
-        setMessage("Say cheese! Taking your photo in 4 seconds...");
+        setResponseMessage("Say cheese! Taking your photo in 4 seconds...");
         setTimeout(() => {
           takeSnapshot();
         }, 4000);
@@ -73,11 +81,9 @@ function IPhoneMessageApp() {
       })
       .then(response => {
         console.log("Photo sent to backend");
-        // No longer changing the message here
       })
       .catch(error => {
         console.error("Error sending photo:", error);
-        // No longer changing the message here either
       });
     }
   };
@@ -100,15 +106,44 @@ function IPhoneMessageApp() {
 
             {/* Message app background */}
             <div className="h-full w-full pt-4 bg-gray-100 flex flex-col">
-              {/* Message bubble from backend */}
+              {/* Received message bubble (from random message generator) */}
+              <div className="px-4 py-2">
+                <div className="bg-gray-300 text-black p-3 rounded-t-xl rounded-bl-xl max-w-[80%] mr-auto relative mb-1">
+                  <p className="text-sm">{originalMessage}</p>
+                </div>
+                <span className="text-xs text-gray-500 flex justify-start pl-2">
+                  Just now
+                </span>
+              </div>
+
+              {/* Response message bubble from model */}
               <div className="px-4 py-2">
                 <div className="bg-blue-500 text-white p-3 rounded-t-xl rounded-br-xl max-w-[80%] ml-auto relative mb-1">
-                  <p className="text-sm">{message}</p>
+                  <p className="text-sm">{responseMessage}</p>
                 </div>
                 <span className="text-xs text-gray-500 flex justify-end pr-2">
                   Just now
                 </span>
               </div>
+
+              {/* Photo and emotion display */}
+              {photoTaken && (
+                <div className="absolute bottom-4 left-0 right-0 px-4">
+                  <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                    <canvas
+                      ref={canvasRef}
+                      width={320}
+                      height={240}
+                      className="w-full h-32 object-cover"
+                    />
+                    {emotion && (
+                      <div className="bg-gray-100 p-2 text-center">
+                        <p className="text-sm font-medium">Emotion: <span className="font-bold text-blue-500">{emotion}</span></p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -123,12 +158,6 @@ function IPhoneMessageApp() {
             autoPlay
             muted
             className="rounded-lg"
-          />
-          <canvas
-            ref={canvasRef}
-            width={320}
-            height={240}
-            className="hidden"
           />
         </div>
       </div>
