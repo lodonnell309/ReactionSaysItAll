@@ -76,6 +76,52 @@ def predict_emotion(model, image_tensor, class_names=None):
 
         return class_probs[0][0]  # Return top prediction if needed
 
+#### LIAM FUNCTS ######
+
+def process_image_as_tensor(image_path, size=(48, 48)):
+    img = cv2.imread(image_path)
+    cropped = crop_center_square(img)
+    gray = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
+    kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+    sharpened = cv2.filter2D(gray, -1, kernel)
+    pil_img = Image.fromarray(sharpened)
+    resized = pil_img.resize(size, resample=Image.LANCZOS)
+
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,))
+    ])
+    tensor = transform(resized).unsqueeze(0)
+    return tensor
+
+def emotion_prediction(image_tensor, class_names=None):
+    if class_names == None:
+        class_names = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
+
+    model = EmotionCNN()
+    model.eval()
+    with torch.no_grad():
+        output = model(image_tensor)
+        probs = F.softmax(output, dim=1).squeeze()  # shape: (7,)
+        prob_list = probs.cpu().numpy()
+
+
+        class_probs = list(zip(class_names, prob_list))
+        class_probs.sort(key=lambda x: x[1], reverse=True)
+
+        print("\n Emotion Probabilities:")
+        print("{:<12} | {:<10}".format("Emotion", "Probability"))
+        print("-" * 26)
+        for cls, prob in class_probs:
+            print("{:<12} | {:.4f}".format(cls, prob))
+
+        return class_probs[0][0]
+
+
+def return_emotion_from_photo(image_path):
+    image_tensor = process_image_as_tensor(image_path)
+    return emotion_prediction(image_tensor)
+
 
 def main():
 
@@ -91,3 +137,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    # return_emotion_from_photo('/Users/liamodonnell/Documents/GitHub/ReactionSaysItAll/JG_models/Webcam_thing/liam_pic.jpg')

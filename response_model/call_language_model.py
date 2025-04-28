@@ -1,7 +1,9 @@
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 import torch
+import os
 import random
 import json
+
 
 model_path = "lodonnell32/ReactionSaysItAll"
 
@@ -15,17 +17,31 @@ def generate_response(input_text):
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 def get_random_msg():
-    with open("test_data.jsonl", "r", encoding="utf-8") as f:
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(current_dir, "test_data.jsonl")
+    if not os.path.isfile(file_path):
+        raise FileNotFoundError(f"{file_path} not found")
+    with open(file_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
-
     random_index = random.choice(lines).strip()
-
     entry = json.loads(random_index)
-
     input_text = entry["input"]
     context = input_text.split("context:")[1].strip() if "context:" in input_text else ""
-
     return context
+
+
+# def get_random_msg():
+#     with open("test_data.jsonl", "r", encoding="utf-8") as f:
+#         lines = f.readlines()
+#
+#     random_index = random.choice(lines).strip()
+#
+#     entry = json.loads(random_index)
+#
+#     input_text = entry["input"]
+#     context = input_text.split("context:")[1].strip() if "context:" in input_text else ""
+#
+#     return context
 
 
 def query_model(emotion='neutral',text_message='random'):
@@ -47,11 +63,7 @@ def query_model(emotion='neutral',text_message='random'):
         text_message = get_random_msg()
 
     full_query = f'emotion: {emotion} | {text_message}'
-
-    print('Text Message Received:')
-    print(text_message)
-    print('Text Message Response:')
-    print(generate_response(full_query))
+    return generate_response(full_query)
 
 
 if __name__ == "__main__":
