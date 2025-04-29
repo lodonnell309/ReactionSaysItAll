@@ -6,3 +6,4 @@ api_key.env
 api_key.py
 response_model/api_key.yaml
 *.jpg
+JG_models/Webcam_thing/webcam_image.png
