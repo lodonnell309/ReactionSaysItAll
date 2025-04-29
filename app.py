@@ -22,11 +22,11 @@ def index():
 def get_message():
     # Get a random message as the trigger message
     random_msg = get_random_msg()
-    random_msg = 'Lets go running today!'
+    # random_msg = 'Lets go running today!'
     gemini = True
 
     if gemini:
-        response = get_gemini_response(emotion='Sad',context = random_msg)
+        response = get_gemini_response(emotion='angry',context = random_msg)
     else:
         # Use the language model to generate a response with neutral emotion
         response = query_model(emotion='angry', text_message=random_msg)

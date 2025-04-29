@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from models.cnn_model import EmotionCNN 
 
 IMAGE_PATH = 'webcam_image.png'
-MODEL_PATH = 'epoch_884.pth'
+MODEL_PATH = 'best_model.pth'
 INPUT_SIZE = (48, 48)
 CLASS_NAMES = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
 
@@ -46,7 +46,6 @@ def capture_and_process_image(output_path=IMAGE_PATH, size=INPUT_SIZE):
     resized = pil_img.resize(size, resample=Image.LANCZOS)
     resized.save(output_path)
     print(f"Saved processed image to {output_path}")
-
 
 def load_image_as_tensor(image_path=IMAGE_PATH):
     transform = transforms.Compose([
