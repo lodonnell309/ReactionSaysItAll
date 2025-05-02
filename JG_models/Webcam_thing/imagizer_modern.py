@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torchvision import transforms
 import torch.nn.functional as F
-from models.cnn_model import EmotionCNN 
+from JG_models.models.cnn_model import EmotionCNN
 
 IMAGE_PATH = 'webcam_image.png'
 MODEL_PATH = 'best_model.pth'
@@ -90,7 +90,7 @@ def main():
     print("\n Predicted emotion:", prediction)
 
 ## lod func
-def predict_emotion_from_image_path(image_path, model_path='epoch_884.pth', input_size=(48,48), class_names= ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']):
+def predict_emotion_from_image_path(image_path, model_path='JG_models/Webcam_thing/epoch_884.pth', input_size=(48,48), class_names= ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']):
     # Applying same process as Jeremy
     img = cv2.imread(image_path)
     if img is None:
