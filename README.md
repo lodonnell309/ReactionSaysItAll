@@ -1,6 +1,6 @@
 # ReactionSaysItAll
 
-**ReactionSaysItAll** is a CS 7643 Deep Learning project that explores how facial expressions can drive natural language responses. The app uses a Convolutional Neural Network (CNN) to analyze a user's facial reaction to a text message and then generates a response based on that reaction. We fine-tuned Google’s T5-small model for text generation, with optional support for integrating Gemini for more advanced responses.
+**ReactionSaysItAll** is a CS 7643 Deep Learning project that explores how facial expressions can drive natural language responses. The app uses a Convolutional Neural Network (CNN) to analyze a user's facial reaction to a text message and then generates a response based on that reaction. We fine-tuned Google’s T5-small model for text generation, with optional support for integrating Gemini for more advanced responses. The final project paper can be found in project deliverables. 
 
 ---
 
